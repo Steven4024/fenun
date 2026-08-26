@@ -5,7 +5,13 @@ interface Props {
 }
 
 export function Brands({ brands }: Props) {
-  const sorted = [...brands].sort((a, b) => a.sort_order - b.sort_order);
+  const DEFAULT_BRANDS = [
+    { id: '1', name: 'Truper', logo_url: 'https://images.seeklogo.com/logo-png/43/1/truper-logo-png_seeklogo-434057.png', sort_order: 1 },
+    { id: '2', name: 'Stanley', logo_url: 'https://images.seeklogo.com/logo-png/30/1/stanley-logo-png_seeklogo-305808.png', sort_order: 2 }
+  ];
+
+  const list = brands && brands.length > 0 ? brands : DEFAULT_BRANDS;
+  const sorted = [...list].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <section className="border-y border-slate-100 bg-white py-10">

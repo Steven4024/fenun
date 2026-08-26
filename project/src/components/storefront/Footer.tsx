@@ -29,7 +29,7 @@ export function Footer({ settings, categories }: Props) {
             </li>
             <li className="flex items-start gap-2">
               <Clock className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Lun–Vie 8:00–18:00, Sáb 8:00–13:00</span>
+             <span>Lun–Dom 7:30 am – 6:00 pm</span>
             </li>
           </ul>
         </div>
