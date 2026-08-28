@@ -24,6 +24,8 @@ export function Storefront() {
 
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeBrand, setActiveBrand] = useState<string | null>(null);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -58,14 +60,15 @@ export function Storefront() {
     const q = query.trim().toLowerCase();
     return withCategory.filter((p) => {
       const matchesCat = activeCategory ? p.category?.slug === activeCategory : true;
+      const matchesBrand = activeBrand ? p.tags.includes(`brand:${activeBrand}`) : true;
       const matchesQuery = q
         ? p.name.toLowerCase().includes(q) ||
           (p.description?.toLowerCase().includes(q) ?? false) ||
           p.tags.some((t) => t.toLowerCase().includes(q))
         : true;
-      return matchesCat && matchesQuery;
+      return matchesCat && matchesBrand && matchesQuery;
     });
-  }, [withCategory, query, activeCategory]);
+  }, [withCategory, query, activeCategory, activeBrand]);
 
   const goHome = () => {
     window.history.pushState({}, '', '/');
@@ -79,6 +82,7 @@ export function Storefront() {
   }, [withCategory, query]);
 
   const selectedCategory = categories.find((category) => category.slug === activeCategory) ?? null;
+  const offers = useMemo(() => withCategory.filter((product) => product.tags.includes('featured') && product.stock > 0).slice(0, 4), [withCategory]);
   const recommendations = useMemo(() => activeCategory ? withCategory.filter((product) => product.category?.slug !== activeCategory && product.stock > 0).slice(0, 4) : [], [withCategory, activeCategory]);
 
   const addToCart = (product: ProductWithCategory) => {
@@ -94,6 +98,7 @@ export function Storefront() {
 
   const selectResult = (product: ProductWithCategory) => {
     setQuery('');
+    setActiveBrand(null);
     setActiveCategory(product.category?.slug ?? null);
     window.setTimeout(() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
@@ -102,11 +107,12 @@ export function Storefront() {
     <div className="min-h-screen bg-canvas">
       <Header query={query} onQuery={setQuery} onLogo={goHome} settings={settings} results={searchResults} onSelectResult={selectResult} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} onCart={() => setCartOpen(true)} />
       <Hero banners={banners} settings={settings} />
-      <Brands brands={brands} />
-      <CategoryCircles categories={categories} active={activeCategory} onSelect={setActiveCategory} />
+      <Brands brands={brands} activeBrand={activeBrand} onSelect={(brand) => { setActiveBrand(brand?.id ?? null); setActiveCategory(null); window.setTimeout(() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); }} />
+      <CategoryCircles categories={categories} active={activeCategory} onSelect={(slug) => { setActiveBrand(null); setActiveCategory(slug); }} />
       {selectedCategory && <CategoryHero category={selectedCategory} onBack={() => { setActiveCategory(null); window.setTimeout(() => document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); }} />}
-      <ProductGrid products={filtered} loading={loading} settings={settings} title={selectedCategory ? `Categoría: ${selectedCategory.name}` : 'Catálogo'} onAdd={addToCart} />
-      {selectedCategory && recommendations.length > 0 && <ProductGrid products={recommendations} loading={false} settings={settings} title="También te puede interesar" onAdd={addToCart} />}
+      {!activeCategory && !activeBrand && offers.length > 0 && <ProductGrid products={offers} loading={false} settings={settings} title="Ofertas del Mes" onAdd={addToCart} view={view} onView={setView} />}
+      <ProductGrid products={filtered} loading={loading} settings={settings} title={activeBrand ? `Marca: ${brands.find((brand) => brand.id === activeBrand)?.name ?? ''}` : selectedCategory ? `Categoría: ${selectedCategory.name}` : 'Catálogo'} onAdd={addToCart} view={view} onView={setView} />
+      {selectedCategory && recommendations.length > 0 && <ProductGrid products={recommendations} loading={false} settings={settings} title="También te puede interesar" onAdd={addToCart} view={view} onView={setView} />}
       <VideoReels videos={videos} />
       <Footer settings={settings} categories={categories} />
       <FloatingWhatsApp settings={settings} />

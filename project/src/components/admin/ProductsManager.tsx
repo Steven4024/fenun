@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Search, PackagePlus, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import type { Category, Product, ProductWithCategory } from '@/lib/types';
+import type { Brand, Category, Product, ProductWithCategory } from '@/lib/types';
 import { uploadImage, uploadVideo } from '@/lib/storage';
 
 export function ProductsManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<Product | null>(null);
@@ -14,12 +15,14 @@ export function ProductsManager() {
 
   async function load() {
     setLoading(true);
-    const [p, c] = await Promise.all([
+    const [p, c, b] = await Promise.all([
       supabase.from('products').select('*').order('created_at', { ascending: false }),
       supabase.from('categories').select('*').order('sort_order'),
+      supabase.from('brands').select('*').order('sort_order'),
     ]);
     setProducts(p.data ?? []);
     setCategories(c.data ?? []);
+    setBrands(b.data ?? []);
     setLoading(false);
   }
 
@@ -103,6 +106,7 @@ export function ProductsManager() {
         <ProductForm
           initial={editing}
           categories={categories}
+          brands={brands}
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); load(); }}
         />
@@ -111,13 +115,15 @@ export function ProductsManager() {
   );
 }
 
-function ProductForm({ initial, categories, onClose, onSaved }: { initial: Product | null; categories: Category[]; onClose: () => void; onSaved: () => void }) {
+function ProductForm({ initial, categories, brands, onClose, onSaved }: { initial: Product | null; categories: Category[]; brands: Brand[]; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? '');
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
   const [videoUrl, setVideoUrl] = useState(initial?.video_url ?? '');
   const [tags, setTags] = useState((initial?.tags ?? []).join(', '));
+  const [brandId, setBrandId] = useState((initial?.tags ?? []).find((tag) => tag.startsWith('brand:'))?.slice(6) ?? '');
+  const [featured, setFeatured] = useState((initial?.tags ?? []).includes('featured'));
   const [price, setPrice] = useState(initial?.price?.toString() ?? '');
   const [stock, setStock] = useState((initial?.stock ?? 0).toString());
   const [saving, setSaving] = useState(false);
@@ -135,7 +141,7 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
       category_id: categoryId || null,
       image_url: imageUrl || null,
       video_url: videoUrl || null,
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags: [...tags.split(',').map((t) => t.trim()).filter((t) => Boolean(t) && !t.startsWith('brand:') && t !== 'featured'), ...(brandId ? [`brand:${brandId}`] : []), ...(featured ? ['featured'] : [])],
       price: price ? Number(price) : null,
       stock: stock ? Number(stock) : 0,
     };
@@ -190,6 +196,10 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
               </select>
             </div>
             <div>
+              <label className="label">Marca</label>
+              <select value={brandId} onChange={(e) => setBrandId(e.target.value)} className="input"><option value="">Sin marca</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select>
+            </div>
+            <div>
               <label className="label">Precio (opcional)</label>
               <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className="input" placeholder="0.00" />
             </div>
@@ -215,6 +225,7 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
             <label className="label">Etiquetas (separadas por comas)</label>
             <input value={tags} onChange={(e) => setTags(e.target.value)} className="input" placeholder="Envío a domicilio, En stock" />
           </div>
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"><input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="h-4 w-4" /> Destacar en “Ofertas del Mes”</label>
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         </div>
 

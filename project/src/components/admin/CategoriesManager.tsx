@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/lib/types';
-import { iconFor, iconOptions } from '@/lib/icons';
+import { iconFor } from '@/lib/icons';
 import { uploadImage } from '@/lib/storage';
 
 function slugify(s: string): string {
@@ -92,8 +92,7 @@ export function CategoriesManager() {
 
 function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(initial?.name ?? '');
-  const [slug, setSlug] = useState(initial?.slug ?? '');
-  const [icon, setIcon] = useState(initial?.icon ?? 'Package');
+  const [icon] = useState(initial?.icon ?? 'Package');
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
   const [uploading, setUploading] = useState(false);
   const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
@@ -104,7 +103,7 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null;
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const payload = { name, slug: slug || slugify(name), icon, image_url: imageUrl || null, sort_order: sortOrder };
+    const payload = { name, slug: initial?.slug ?? slugify(name), icon, image_url: imageUrl || null, sort_order: sortOrder };
     try {
       const res = initial ? await supabase.from('categories').update(payload).eq('id', initial.id) : await supabase.from('categories').insert(payload);
       if (res.error) { setError(res.error.message); return; }
@@ -137,28 +136,16 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null;
         <div className="space-y-4">
           <div>
             <label className="label">Nombre</label>
-            <input value={name} onChange={(e) => { setName(e.target.value); if (!initial) setSlug(slugify(e.target.value)); }} className="input" required placeholder="Albañilería" />
+            <input value={name} onChange={(e) => setName(e.target.value)} className="input" required placeholder="Albañilería" />
           </div>
-          <div>
-            <label className="label">Slug (URL)</label>
-            <input value={slug} onChange={(e) => setSlug(e.target.value)} className="input" required placeholder="albanileria" />
-          </div>
-          <div>
-            <label className="label">Ícono</label>
-            <select value={icon} onChange={(e) => setIcon(e.target.value)} className="input">
-              {iconOptions.map((o) => {
-                return <option key={o} value={o}>{o}</option>;
-              })}
-            </select>
-            <div className="mt-2 flex items-center gap-2 text-slate-500"><span className="text-xs">Vista previa:</span><PreviewIcon className="h-5 w-5" /></div>
-          </div>
+          <div className="flex items-center gap-2 text-slate-500"><PreviewIcon className="h-5 w-5" /><span className="text-xs">Se generará una URL interna a partir del nombre.</span></div>
           <div>
             <label className="label">Imagen de categoría (opcional)</label>
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink"><Upload className="h-4 w-4" />{uploading ? 'Subiendo imagen...' : 'Subir imagen'}<input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => selectImage(e.target.files?.[0])} /></label>
             {imageUrl && <img src={imageUrl} alt="Vista previa" className="mt-2 h-24 w-full rounded-xl object-cover" />}
           </div>
           <div>
-            <label className="label">Orden</label>
+            <label className="label">Número de orden / prioridad</label>
             <input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} className="input" />
           </div>
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

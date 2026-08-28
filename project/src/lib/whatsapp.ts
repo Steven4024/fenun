@@ -10,9 +10,9 @@ export function quoteProductMessage(productName: string): string {
 }
 
 export function quoteCartMessage(items: { name: string; price: number | null; quantity: number }[], document: string, receipt: string, payment: string, customerName = ''): string {
-  const lines = items.map((item) => `• ${item.name} x${item.quantity}${item.price != null ? ` — S/ ${(item.price * item.quantity).toFixed(2)}` : ''}`);
+  const lines = items.map((item, index) => `${index + 1}. ${item.name}\n   Cantidad: ${item.quantity}${item.price != null ? ` | Precio unitario: S/ ${item.price.toFixed(2)}\n   Subtotal: S/ ${(item.price * item.quantity).toFixed(2)}` : ''}`);
   const total = items.reduce((sum, item) => sum + (item.price ?? 0) * item.quantity, 0);
-  return `Hola FENUN, deseo solicitar esta cotización:\n\n${lines.join('\n')}\n\nTotal: S/ ${total.toFixed(2)}\nDocumento: ${document}${customerName ? `\nCliente: ${customerName}` : ''}\nComprobante: ${receipt}\nMétodo de pago: ${payment}`;
+  return `Hola, Ferretería FENUN.\n\nSolicito por favor la siguiente cotización:\n\n${lines.join('\n\n')}\n\nTOTAL GENERAL: S/ ${total.toFixed(2)}\n\nDatos de facturación\nDocumento: ${document}${customerName ? `\nCliente: ${customerName}` : ''}\nComprobante: ${receipt}\nMétodo de pago: ${payment}\n\nQuedo atento(a) a su confirmación. Muchas gracias.`;
 }
 
 export function generalContactMessage(): string {
