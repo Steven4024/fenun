@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/lib/types';
 import { iconFor, iconOptions } from '@/lib/icons';
+import { uploadImage } from '@/lib/storage';
 
 function slugify(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -91,6 +92,7 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null;
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [icon, setIcon] = useState(initial?.icon ?? 'Package');
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
+  const [uploading, setUploading] = useState(false);
   const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +112,16 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null;
     if (res.error) { setError(res.error.message); return; }
     onSaved();
   }
+
+  async function selectImage(file: File | undefined) {
+    if (!file) return;
+    setUploading(true); setError(null);
+    try { setImageUrl(await uploadImage(file, 'categories')); }
+    catch (err) { setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.'); }
+    finally { setUploading(false); }
+  }
+
+  const PreviewIcon = iconFor(icon);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -135,11 +147,12 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null;
                 return <option key={o} value={o}>{o}</option>;
               })}
             </select>
-            <div className="mt-2 flex items-center gap-2 text-slate-500"><span className="text-xs">Vista previa:</span>{(() => { const Icon = iconFor(icon); return <Icon className="h-5 w-5" />; })()}</div>
+            <div className="mt-2 flex items-center gap-2 text-slate-500"><span className="text-xs">Vista previa:</span><PreviewIcon className="h-5 w-5" /></div>
           </div>
           <div>
-            <label className="label">URL de foto (opcional, reemplaza ícono)</label>
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="input" placeholder="https://..." />
+            <label className="label">Imagen de categoría (opcional)</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink"><Upload className="h-4 w-4" />{uploading ? 'Subiendo imagen...' : 'Subir imagen'}<input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => selectImage(e.target.files?.[0])} /></label>
+            {imageUrl && <img src={imageUrl} alt="Vista previa" className="mt-2 h-24 w-full rounded-xl object-cover" />}
           </div>
           <div>
             <label className="label">Orden</label>

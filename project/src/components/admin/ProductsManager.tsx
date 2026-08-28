@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Search, PackagePlus, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Product, ProductWithCategory } from '@/lib/types';
-import { uploadImage } from '@/lib/storage';
+import { uploadImage, uploadVideo } from '@/lib/storage';
 
 export function ProductsManager() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -115,13 +115,13 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? '');
-  const [imageUrl] = useState(initial?.image_url ?? '');
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
   const [videoUrl, setVideoUrl] = useState(initial?.video_url ?? '');
   const [tags, setTags] = useState((initial?.tags ?? []).join(', '));
   const [price, setPrice] = useState(initial?.price?.toString() ?? '');
   const [stock, setStock] = useState((initial?.stock ?? 0).toString());
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
@@ -129,12 +129,11 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
     setSaving(true);
     setError(null);
     try {
-      const uploadedImageUrl = imageFile ? await uploadImage(imageFile, 'products') : imageUrl;
       const payload = {
       name,
       description: description || null,
       category_id: categoryId || null,
-      image_url: uploadedImageUrl || null,
+      image_url: imageUrl || null,
       video_url: videoUrl || null,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       price: price ? Number(price) : null,
@@ -153,6 +152,14 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
     } finally {
       setSaving(false);
     }
+  }
+
+  async function selectFile(file: File | undefined, type: 'image' | 'video') {
+    if (!file) return;
+    setUploading(true); setError(null);
+    try { const url = type === 'image' ? await uploadImage(file, 'products') : await uploadVideo(file, 'products'); if (type === 'image') setImageUrl(url); else setVideoUrl(url); }
+    catch (err) { setError(err instanceof Error ? err.message : 'No se pudo subir el archivo.'); }
+    finally { setUploading(false); }
   }
 
   return (
@@ -194,14 +201,15 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
           <div>
             <label className="label">Imagen del producto</label>
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink">
-              <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Subir imagen'}
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+              <Upload className="h-4 w-4" /> {uploading ? 'Subiendo...' : 'Subir imagen'}
+              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => selectFile(e.target.files?.[0], 'image')} />
             </label>
             {imageUrl && <img src={imageUrl} alt="preview" className="mt-2 h-24 w-24 rounded-xl object-cover" />}
           </div>
           <div>
-            <label className="label">URL del video (opcional)</label>
-            <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="input" placeholder="https://...mp4" />
+            <label className="label">Video (opcional)</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink"><Upload className="h-4 w-4" /> {uploading ? 'Subiendo...' : 'Subir video'}<input type="file" accept="video/*" className="hidden" disabled={uploading} onChange={(e) => selectFile(e.target.files?.[0], 'video')} /></label>
+            {videoUrl && <video src={videoUrl} muted controls className="mt-2 h-32 w-full rounded-xl object-cover" />}
           </div>
           <div>
             <label className="label">Etiquetas (separadas por comas)</label>

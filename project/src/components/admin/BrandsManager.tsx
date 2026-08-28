@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Brand } from '@/lib/types';
+import { uploadImage } from '@/lib/storage';
 
 export function BrandsManager() {
   const [items, setItems] = useState<Brand[]>([]);
@@ -68,6 +69,7 @@ export function BrandsManager() {
 function BrandForm({ initial, onClose, onSaved }: { initial: Brand | null; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [logoUrl, setLogoUrl] = useState(initial?.logo_url ?? '');
+  const [uploading, setUploading] = useState(false);
   const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +87,8 @@ function BrandForm({ initial, onClose, onSaved }: { initial: Brand | null; onClo
     onSaved();
   }
 
+  async function selectImage(file: File | undefined) { if (!file) return; setUploading(true); setError(null); try { setLogoUrl(await uploadImage(file, 'brands')); } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.'); } finally { setUploading(false); } }
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="w-full max-w-md animate-scale-in rounded-2xl bg-white p-6 shadow-2xl">
@@ -98,8 +102,8 @@ function BrandForm({ initial, onClose, onSaved }: { initial: Brand | null; onClo
             <input value={name} onChange={(e) => setName(e.target.value)} className="input" required placeholder="EMTOP" />
           </div>
           <div>
-            <label className="label">URL del logo (opcional)</label>
-            <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} className="input" placeholder="https://..." />
+            <label className="label">Logo (opcional)</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600"><Upload className="h-4 w-4" />{uploading ? 'Subiendo imagen...' : 'Subir imagen'}<input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => selectImage(e.target.files?.[0])} /></label>
             {logoUrl && <img src={logoUrl} alt="preview" className="mt-2 grid h-16 w-24 place-items-center rounded-lg bg-canvas object-contain p-2" />}
           </div>
           <div>

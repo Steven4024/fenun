@@ -76,12 +76,12 @@ export function BannersManager() {
 
 function BannerForm({ initial, onClose, onSaved }: { initial: Banner | null; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [imageUrl] = useState(initial?.image_url ?? '');
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
   const [linkUrl, setLinkUrl] = useState(initial?.link_url ?? '');
   const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
   const [active, setActive] = useState(initial?.active ?? true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
@@ -89,9 +89,8 @@ function BannerForm({ initial, onClose, onSaved }: { initial: Banner | null; onC
     setSaving(true);
     setError(null);
     try {
-      const uploadedImageUrl = imageFile ? await uploadImage(imageFile, 'banners') : imageUrl;
-      if (!uploadedImageUrl) { setError('Selecciona una imagen para el banner.'); return; }
-      const payload = { title: title || null, image_url: uploadedImageUrl, link_url: linkUrl || null, sort_order: sortOrder, active };
+      if (!imageUrl) { setError('Selecciona una imagen para el banner.'); return; }
+      const payload = { title: title || null, image_url: imageUrl, link_url: linkUrl || null, sort_order: sortOrder, active };
       const res = initial ? await supabase.from('banners').update(payload).eq('id', initial.id) : await supabase.from('banners').insert(payload);
       if (res.error) { setError(res.error.message); return; }
       onSaved();
@@ -99,6 +98,8 @@ function BannerForm({ initial, onClose, onSaved }: { initial: Banner | null; onC
       setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.');
     } finally { setSaving(false); }
   }
+
+  async function selectImage(file: File | undefined) { if (!file) return; setUploading(true); setError(null); try { setImageUrl(await uploadImage(file, 'banners')); } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.'); } finally { setUploading(false); } }
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -115,8 +116,8 @@ function BannerForm({ initial, onClose, onSaved }: { initial: Banner | null; onC
           <div>
             <label className="label">Imagen (16:9)</label>
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink">
-              <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Subir imagen'}
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+              <Upload className="h-4 w-4" /> {uploading ? 'Subiendo imagen...' : 'Subir imagen'}
+              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => selectImage(e.target.files?.[0])} />
             </label>
             {imageUrl && <img src={imageUrl} alt="preview" className="mt-2 aspect-video w-full rounded-xl object-cover" />}
           </div>

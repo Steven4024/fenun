@@ -8,50 +8,14 @@ interface Props {
 }
 
 export function CategoryCircles({ categories, active, onSelect }: Props) {
-  return (
-    <section id="categorias" className="container-app py-12">
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-ink">Categorías</h2>
-          <p className="mt-1 text-sm text-slate-500">Explora nuestros productos por área</p>
-        </div>
-        {active && (
-          <button onClick={() => onSelect(null)} className="text-sm font-semibold text-ink underline-offset-4 hover:underline">
-            Ver todo
-          </button>
-        )}
-      </div>
-
-      <div className="flex gap-6 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {categories.map((c) => {
-          const Icon = iconFor(c.icon);
-          const isActive = active === c.slug;
-          return (
-            <button
-              key={c.id}
-              onClick={() => onSelect(isActive ? null : c.slug)}
-              className="group flex shrink-0 flex-col items-center gap-3"
-            >
-              <div
-                className={`grid h-20 w-20 place-items-center rounded-full border-2 transition-all duration-300 group-hover:scale-105 ${
-                  isActive
-                    ? 'border-ink bg-ink text-white shadow-md'
-                    : 'border-slate-200 bg-white text-ink group-hover:border-slate-300'
-                }`}
-              >
-                {c.image_url ? (
-                  <img src={c.image_url} alt={c.name} className="h-full w-full rounded-full object-cover" />
-                ) : (
-                  <Icon className="h-7 w-7" />
-                )}
-              </div>
-              <span className={`max-w-[80px] text-center text-xs font-medium ${isActive ? 'text-ink' : 'text-slate-600'}`}>
-                {c.name}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
+  if (active) return null;
+  return <section id="categorias" className="container-app py-12">
+    <div className="mb-6"><h2 className="text-2xl font-bold tracking-tight text-ink">Categorías</h2><p className="mt-1 text-sm text-slate-500">Explora nuestros productos por área</p></div>
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      {categories.map((category) => { const Icon = iconFor(category.icon); return <button key={category.id} onClick={() => onSelect(category.slug)} className="group overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-card transition hover:-translate-y-1 hover:shadow-cardHover">
+        <div className="aspect-[4/3] bg-slate-100">{category.image_url ? <img src={category.image_url} alt={category.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <span className="grid h-full place-items-center text-slate-300"><Icon className="h-10 w-10" /></span>}</div>
+        <p className="p-3 text-sm font-bold text-ink">{category.name}</p>
+      </button>; })}
+    </div>
+  </section>;
 }

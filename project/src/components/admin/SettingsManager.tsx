@@ -3,12 +3,14 @@ import { Save, Upload, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { SiteSettings } from '@/lib/types';
 import { DEFAULT_WHATSAPP_NUMBER } from '@/lib/whatsapp';
+import { uploadImage } from '@/lib/storage';
 
 export function SettingsManager() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     supabase.from('site_settings').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
@@ -37,6 +39,8 @@ export function SettingsManager() {
 
   if (!settings) return <p className="text-sm text-slate-400">Cargando...</p>;
 
+  async function selectImage(file: File | undefined, field: 'logo_url' | 'store_photo_url') { if (!file) return; setUploading(true); setError(null); try { const url = await uploadImage(file, field === 'logo_url' ? 'settings/logo' : 'settings/store'); setSettings((current) => current ? (field === 'logo_url' ? { ...current, logo_url: url } : { ...current, store_photo_url: url }) : current); } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.'); } finally { setUploading(false); } }
+
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold tracking-tight text-ink">Ajustes del sitio</h1>
@@ -55,14 +59,7 @@ export function SettingsManager() {
               )}
             </div>
             <div className="flex-1">
-              <label className="label">URL del logo</label>
-              <input
-                value={settings.logo_url ?? ''}
-                onChange={(e) => setSettings({ ...settings, logo_url: e.target.value || null })}
-                className="input"
-                placeholder="https://... (sube la imagen y pega el enlace)"
-              />
-              <p className="mt-1 text-xs text-slate-400">Pega aquí la URL del emblema plateado de FENUN.</p>
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600"><Upload className="h-4 w-4" />{uploading ? 'Subiendo imagen...' : 'Subir imagen'}<input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => selectImage(e.target.files?.[0], 'logo_url')} /></label>
             </div>
           </div>
         </fieldset>
@@ -80,13 +77,7 @@ export function SettingsManager() {
             </div>
             <div className="flex-1 space-y-3">
               <div>
-                <label className="label">URL de la foto</label>
-                <input
-                  value={settings.store_photo_url ?? ''}
-                  onChange={(e) => setSettings({ ...settings, store_photo_url: e.target.value || null })}
-                  className="input"
-                  placeholder="https://..."
-                />
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600"><Upload className="h-4 w-4" />{uploading ? 'Subiendo imagen...' : 'Subir imagen'}<input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => selectImage(e.target.files?.[0], 'store_photo_url')} /></label>
               </div>
               <div>
                 <label className="label">Título (opcional)</label>
@@ -138,7 +129,7 @@ export function SettingsManager() {
 
       <div className="mt-6 flex items-start gap-2 rounded-xl bg-slate-50 p-4 text-xs text-slate-500">
         <Upload className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>Para subir el logo o la foto del local: pega la URL directa de la imagen (terminada en .png, .jpg, etc.) en el campo correspondiente. Si la imagen está en tu computadora, súbela primero a un servicio de imágenes y copia el enlace aquí.</p>
+        <p>Selecciona una imagen desde tu computadora; se subirá al Storage de FENUN y la vista previa se actualizará al finalizar.</p>
       </div>
     </div>
   );

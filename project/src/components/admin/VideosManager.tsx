@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Video } from '@/lib/types';
+import { uploadVideo } from '@/lib/storage';
 
 export function VideosManager() {
   const [items, setItems] = useState<Video[]>([]);
@@ -68,6 +69,7 @@ function VideoForm({ initial, onClose, onSaved }: { initial: Video | null; onClo
   const [title, setTitle] = useState(initial?.title ?? '');
   const [videoUrl, setVideoUrl] = useState(initial?.video_url ?? '');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
@@ -83,6 +85,8 @@ function VideoForm({ initial, onClose, onSaved }: { initial: Video | null; onClo
     onSaved();
   }
 
+  async function selectVideo(file: File | undefined) { if (!file) return; setUploading(true); setError(null); try { setVideoUrl(await uploadVideo(file, 'videos')); } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo subir el video.'); } finally { setUploading(false); } }
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <form onClick={(e) => e.stopPropagation()} onSubmit={save} className="w-full max-w-md animate-scale-in rounded-2xl bg-white p-6 shadow-2xl">
@@ -96,8 +100,8 @@ function VideoForm({ initial, onClose, onSaved }: { initial: Video | null; onClo
             <input value={title} onChange={(e) => setTitle(e.target.value)} className="input" placeholder="Llegó: Taladro 20V" />
           </div>
           <div>
-            <label className="label">URL del video (mp4)</label>
-            <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="input" required placeholder="https://...mp4" />
+            <label className="label">Video</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink"><Upload className="h-4 w-4" />{uploading ? 'Subiendo video...' : 'Subir video'}<input type="file" accept="video/*" className="hidden" disabled={uploading} onChange={(e) => selectVideo(e.target.files?.[0])} /></label>
             {videoUrl && <video src={videoUrl} muted loop autoPlay playsInline className="mt-2 aspect-[9/16] h-40 rounded-xl object-cover" />}
           </div>
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

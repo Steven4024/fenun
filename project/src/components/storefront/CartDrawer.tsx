@@ -1,6 +1,8 @@
-import { Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react';
 import type { ProductWithCategory, SiteSettings } from '@/lib/types';
 import { quoteCartMessage, waLink } from '@/lib/whatsapp';
+import { lookupDocument } from '@/lib/documentLookup';
 
 export type CartItem = { product: ProductWithCategory; quantity: number };
 
@@ -39,16 +41,27 @@ export function CartDrawer({ items, open, onClose, onQuantity, settings }: Props
 }
 
 function Checkout({ items, settings }: { items: CartItem[]; settings: SiteSettings }) {
+  const [document, setDocument] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [lookupStatus, setLookupStatus] = useState('');
+  const lookup = async (value: string) => {
+    if (value.length !== 8 && value.length !== 11) return;
+    setLookupStatus('Consultando datos...'); setCustomerName('');
+    try { setCustomerName(await lookupDocument(value)); setLookupStatus('Datos encontrados'); }
+    catch (err) { setLookupStatus(err instanceof Error ? err.message : 'No se pudo consultar el documento.'); }
+  };
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const document = String(form.get('document') ?? '');
     const receipt = String(form.get('receipt') ?? '');
     const payment = String(form.get('payment') ?? '');
-    window.open(waLink(quoteCartMessage(items.map(({ product, quantity }) => ({ ...product, quantity })), document, receipt, payment), settings.whatsapp_number), '_blank', 'noopener,noreferrer');
+    window.open(waLink(quoteCartMessage(items.map(({ product, quantity }) => ({ ...product, quantity })), document, receipt, payment, customerName), settings.whatsapp_number), '_blank', 'noopener,noreferrer');
   };
   return <form onSubmit={submit} className="space-y-3">
-    <input name="document" required pattern="[0-9]{8}|[0-9]{11}" title="Ingresa un DNI de 8 dígitos o RUC de 11 dígitos" className="input" placeholder="DNI o RUC" />
+    <div><input name="document" value={document} onChange={(event) => { const value = event.target.value.replace(/\D/g, '').slice(0, 11); setDocument(value); if (value.length === 8 || value.length === 11) void lookup(value); else { setCustomerName(''); setLookupStatus(''); } }} required pattern="[0-9]{8}|[0-9]{11}" title="Ingresa un DNI de 8 dígitos o RUC de 11 dígitos" className="input" placeholder="DNI o RUC" />
+      {lookupStatus && <p className={`mt-1 flex items-center gap-1 text-xs ${customerName ? 'text-emerald-700' : 'text-slate-500'}`}>{lookupStatus === 'Consultando datos...' && <Loader2 className="h-3 w-3 animate-spin" />}{lookupStatus}</p>}
+      {customerName && <input name="customer_name" readOnly value={customerName} className="input mt-2 bg-emerald-50 text-emerald-900" aria-label="Nombre autocompletado" />}</div>
     <div className="grid grid-cols-2 gap-3"><select name="receipt" required className="input"><option value="Boleta">Boleta</option><option value="Factura">Factura</option></select><select name="payment" required className="input"><option value="Contado">Contado</option><option value="Yape">Yape</option><option value="Plin">Plin</option></select></div>
     <button className="btn-wa w-full" type="submit">Enviar cotización</button>
   </form>;

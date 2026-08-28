@@ -11,6 +11,7 @@ import { ProductGrid } from '@/components/storefront/ProductGrid';
 import { FloatingWhatsApp } from '@/components/storefront/FloatingWhatsApp';
 import { Footer } from '@/components/storefront/Footer';
 import { CartDrawer, type CartItem } from '@/components/storefront/CartDrawer';
+import { CategoryHero } from '@/components/storefront/CategoryHero';
 
 export function Storefront() {
   const settings = useSiteSettings();
@@ -103,6 +104,7 @@ export function Storefront() {
       <Hero banners={banners} settings={settings} />
       <Brands brands={brands} />
       <CategoryCircles categories={categories} active={activeCategory} onSelect={setActiveCategory} />
+      {selectedCategory && <CategoryHero category={selectedCategory} onBack={() => { setActiveCategory(null); window.setTimeout(() => document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); }} />}
       <ProductGrid products={filtered} loading={loading} settings={settings} title={selectedCategory ? `Categoría: ${selectedCategory.name}` : 'Catálogo'} onAdd={addToCart} />
       {selectedCategory && recommendations.length > 0 && <ProductGrid products={recommendations} loading={false} settings={settings} title="También te puede interesar" onAdd={addToCart} />}
       <VideoReels videos={videos} />
