@@ -17,9 +17,12 @@ export function CategoriesManager() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('categories').select('*').order('sort_order');
-    setItems(data ?? []);
-    setLoading(false);
+    try {
+      const { data } = await supabase.from('categories').select('*').order('sort_order');
+      setItems(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -102,15 +105,15 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null;
     setSaving(true);
     setError(null);
     const payload = { name, slug: slug || slugify(name), icon, image_url: imageUrl || null, sort_order: sortOrder };
-    let res;
-    if (initial) {
-      res = await supabase.from('categories').update(payload).eq('id', initial.id);
-    } else {
-      res = await supabase.from('categories').insert(payload);
+    try {
+      const res = initial ? await supabase.from('categories').update(payload).eq('id', initial.id) : await supabase.from('categories').insert(payload);
+      if (res.error) { setError(res.error.message); return; }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la categoría.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    if (res.error) { setError(res.error.message); return; }
-    onSaved();
   }
 
   async function selectImage(file: File | undefined) {

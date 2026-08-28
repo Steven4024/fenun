@@ -23,23 +23,25 @@ export function Brands({ brands }: Props) {
         {sorted.length === 0 ? (
           <p className="text-center text-sm text-slate-400">Pronto mostraremos nuestras marcas aliadas.</p>
         ) : (
-          <div className="flex items-stretch gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {sorted.map((b) => (
+          <div className="overflow-hidden" aria-label="Marcas aliadas">
+            <div className="brand-marquee-track">
+            {[...sorted, ...sorted].map((b, index) => (
               <div
-                key={b.id}
-                className="group flex h-24 w-40 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-canvas p-4 transition-all hover:border-slate-200 hover:bg-white hover:shadow-card"
+                key={`${b.id}-${index}`}
+                className="flex h-24 w-40 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-canvas p-4"
               >
                 {b.logo_url ? (
                   <img
                     src={b.logo_url}
                     alt={b.name}
-                    className="max-h-full max-w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0"
+                    className="max-h-full max-w-full object-contain"
                   />
                 ) : (
                   <span className="text-lg font-bold tracking-tight text-slate-400">{b.name}</span>
                 )}
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>
