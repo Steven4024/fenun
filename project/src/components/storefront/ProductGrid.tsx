@@ -1,14 +1,15 @@
-import { MessageCircle, Tag } from 'lucide-react';
+import { ShoppingCart, Tag } from 'lucide-react';
 import type { ProductWithCategory, SiteSettings } from '@/lib/types';
-import { waLink, quoteProductMessage } from '@/lib/whatsapp';
 
 interface Props {
   products: ProductWithCategory[];
   loading: boolean;
   settings: SiteSettings;
+  title?: string;
+  onAdd: (product: ProductWithCategory) => void;
 }
 
-export function ProductGrid({ products, loading, settings }: Props) {
+export function ProductGrid({ products, loading, title = 'Catálogo', onAdd }: Props) {
   if (loading) {
     return (
       <section className="container-app py-12">
@@ -33,9 +34,9 @@ export function ProductGrid({ products, loading, settings }: Props) {
   }
 
   return (
-    <section className="container-app py-12">
+    <section id="catalogo" className="container-app py-12">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold tracking-tight text-ink">Catálogo</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-ink">{title}</h2>
         <p className="mt-1 text-sm text-slate-500">{products.length} productos disponibles</p>
       </div>
 
@@ -94,14 +95,9 @@ export function ProductGrid({ products, loading, settings }: Props) {
                   <p className="mt-3 text-lg font-bold text-ink">S/ {p.price.toFixed(2)}</p>
                 )}
 
-                <a
-                  href={waLink(quoteProductMessage(p.name), settings.whatsapp_number)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-wa mt-auto w-full"
-                >
-                  <MessageCircle className="h-4 w-4" /> Cotizar
-                </a>
+                <button disabled={!inStock} onClick={() => onAdd(p)} className="btn-ink mt-auto w-full disabled:cursor-not-allowed disabled:opacity-40">
+                  <ShoppingCart className="h-4 w-4" /> {inStock ? 'Agregar' : 'Agotado'}
+                </button>
               </div>
             </article>
           );

@@ -132,11 +132,10 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Category | null;
             <label className="label">Ícono</label>
             <select value={icon} onChange={(e) => setIcon(e.target.value)} className="input">
               {iconOptions.map((o) => {
-                const Icon = iconFor(o);
                 return <option key={o} value={o}>{o}</option>;
               })}
             </select>
-            <div className="mt-2 flex items-center gap-2 text-slate-500"><span className="text-xs">Vista previa:</span><Icon className="h-5 w-5" /></div>
+            <div className="mt-2 flex items-center gap-2 text-slate-500"><span className="text-xs">Vista previa:</span>{(() => { const Icon = iconFor(icon); return <Icon className="h-5 w-5" />; })()}</div>
           </div>
           <div>
             <label className="label">URL de foto (opcional, reemplaza ícono)</label>

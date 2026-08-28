@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Eye, EyeOff, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Banner } from '@/lib/types';
+import { uploadImage } from '@/lib/storage';
 
 export function BannersManager() {
   const [items, setItems] = useState<Banner[]>([]);
@@ -75,7 +76,8 @@ export function BannersManager() {
 
 function BannerForm({ initial, onClose, onSaved }: { initial: Banner | null; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
+  const [imageUrl] = useState(initial?.image_url ?? '');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [linkUrl, setLinkUrl] = useState(initial?.link_url ?? '');
   const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
   const [active, setActive] = useState(initial?.active ?? true);
@@ -86,13 +88,16 @@ function BannerForm({ initial, onClose, onSaved }: { initial: Banner | null; onC
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const payload = { title: title || null, image_url: imageUrl, link_url: linkUrl || null, sort_order: sortOrder, active };
-    let res;
-    if (initial) res = await supabase.from('banners').update(payload).eq('id', initial.id);
-    else res = await supabase.from('banners').insert(payload);
-    setSaving(false);
-    if (res.error) { setError(res.error.message); return; }
-    onSaved();
+    try {
+      const uploadedImageUrl = imageFile ? await uploadImage(imageFile, 'banners') : imageUrl;
+      if (!uploadedImageUrl) { setError('Selecciona una imagen para el banner.'); return; }
+      const payload = { title: title || null, image_url: uploadedImageUrl, link_url: linkUrl || null, sort_order: sortOrder, active };
+      const res = initial ? await supabase.from('banners').update(payload).eq('id', initial.id) : await supabase.from('banners').insert(payload);
+      if (res.error) { setError(res.error.message); return; }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.');
+    } finally { setSaving(false); }
   }
 
   return (
@@ -108,8 +113,11 @@ function BannerForm({ initial, onClose, onSaved }: { initial: Banner | null; onC
             <input value={title} onChange={(e) => setTitle(e.target.value)} className="input" placeholder="Taladros percutores" />
           </div>
           <div>
-            <label className="label">URL de la imagen (16:9)</label>
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="input" required placeholder="https://..." />
+            <label className="label">Imagen (16:9)</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink">
+              <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Subir imagen'}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+            </label>
             {imageUrl && <img src={imageUrl} alt="preview" className="mt-2 aspect-video w-full rounded-xl object-cover" />}
           </div>
           <div>

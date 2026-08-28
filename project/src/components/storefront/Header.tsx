@@ -1,5 +1,5 @@
-import { Search, MessageCircle } from 'lucide-react';
-import type { SiteSettings } from '@/lib/types';
+import { Search, ShoppingCart } from 'lucide-react';
+import type { ProductWithCategory, SiteSettings } from '@/lib/types';
 import { waLink, generalContactMessage } from '@/lib/whatsapp';
 
 interface Props {
@@ -7,12 +7,14 @@ interface Props {
   onQuery: (q: string) => void;
   onLogo: () => void;
   settings: SiteSettings;
+  results: ProductWithCategory[];
+  onSelectResult: (product: ProductWithCategory) => void;
+  cartCount: number;
+  onCart: () => void;
 }
 
-export function Header({ query, onQuery, onLogo, settings }: Props) {
+export function Header({ query, onQuery, onLogo, settings, results, onSelectResult, cartCount, onCart }: Props) {
   const wa = waLink(generalContactMessage(), settings.whatsapp_number);
-  const hasLogo = Boolean(settings.logo_url);
-
   return (
     <header className="sticky top-0 z-40">
       {/* Top announcement bar — slogan with institutional contrast */}
@@ -43,7 +45,10 @@ export function Header({ query, onQuery, onLogo, settings }: Props) {
               placeholder="Buscar productos: malla raschel, taladro, amoladora, grass sintético..."
               className="w-full rounded-full border-2 border-slate-900 bg-white py-2 pl-12 pr-4 text-sm font-medium text-slate-900 placeholder:text-slate-500 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
+            {query.trim() && <SearchResults results={results} onSelectResult={onSelectResult} />}
           </div>
+
+          <button onClick={onCart} className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-slate-200 text-ink hover:bg-slate-50" aria-label="Abrir carrito"><ShoppingCart className="h-5 w-5" />{cartCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">{cartCount}</span>}</button>
 
           <a href={wa} target="_blank" rel="noreferrer" className="btn-wa ml-auto shrink-0">
             <svg
@@ -66,9 +71,16 @@ export function Header({ query, onQuery, onLogo, settings }: Props) {
               placeholder="Buscar productos..."
               className="w-full rounded-full border border-slate-200 bg-canvas py-2 pl-11 pr-4 text-sm placeholder:text-slate-400 focus:border-ink focus:bg-white focus:outline-none"
             />
+            {query.trim() && <SearchResults results={results} onSelectResult={onSelectResult} />}
           </div>
         </div>
       </div>
     </header >
   );
+}
+
+function SearchResults({ results, onSelectResult }: { results: ProductWithCategory[]; onSelectResult: (product: ProductWithCategory) => void }) {
+  return <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+    {results.length === 0 ? <p className="px-4 py-3 text-sm font-medium text-slate-600">Producto no encontrado</p> : results.slice(0, 6).map((product) => <button key={product.id} onClick={() => onSelectResult(product)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50"><span className="h-9 w-9 overflow-hidden rounded bg-slate-100">{product.image_url && <img src={product.image_url} alt="" className="h-full w-full object-cover" />}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold text-ink">{product.name}</span><span className="block text-xs text-slate-500">{product.category?.name ?? 'Sin categoría'}</span></span></button>)}
+  </div>;
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Store, ArrowRight } from 'lucide-react';
 import type { Banner, SiteSettings } from '@/lib/types';
-import { waLink, generalContactMessage } from '@/lib/whatsapp';
 
 interface Props {
   banners: Banner[];

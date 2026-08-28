@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Search, PackagePlus, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Product, ProductWithCategory } from '@/lib/types';
-import { iconFor } from '@/lib/icons';
+import { uploadImage } from '@/lib/storage';
 
 export function ProductsManager() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -29,6 +29,19 @@ export function ProductsManager() {
     if (!confirm('¿Eliminar este producto?')) return;
     await supabase.from('products').delete().eq('id', id);
     load();
+  }
+
+  async function restock(product: Product) {
+    const value = window.prompt(`Unidades a agregar para ${product.name}:`, '1');
+    if (value === null) return;
+    const amount = Number(value);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      window.alert('Ingresa un número entero mayor que cero.');
+      return;
+    }
+    const { error } = await supabase.from('products').update({ stock: product.stock + amount }).eq('id', product.id);
+    if (error) window.alert(error.message);
+    else load();
   }
 
   const withCat: ProductWithCategory[] = products.map((p) => ({
@@ -72,8 +85,10 @@ export function ProductsManager() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
                 <p className="mt-0.5 text-xs text-slate-400">{p.category?.name ?? 'Sin categoría'}</p>
+                <p className="mt-1 text-xs font-medium text-emerald-700">Stock: {p.stock}</p>
                 {p.price != null && <p className="mt-1 text-sm font-bold text-ink">S/ {p.price.toFixed(2)}</p>}
                 <div className="mt-2 flex gap-1">
+                  <button title="Reponer stock" onClick={() => restock(p)} className="grid h-7 w-7 place-items-center rounded-lg text-emerald-600 hover:bg-emerald-50"><PackagePlus className="h-3.5 w-3.5" /></button>
                   <button onClick={() => { setEditing(p); setShowForm(true); }} className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-ink"><Pencil className="h-3.5 w-3.5" /></button>
                   <button onClick={() => remove(p.id)} className="grid h-7 w-7 place-items-center rounded-lg text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
@@ -100,7 +115,8 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? '');
-  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
+  const [imageUrl] = useState(initial?.image_url ?? '');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState(initial?.video_url ?? '');
   const [tags, setTags] = useState((initial?.tags ?? []).join(', '));
   const [price, setPrice] = useState(initial?.price?.toString() ?? '');
@@ -112,25 +128,31 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const payload = {
+    try {
+      const uploadedImageUrl = imageFile ? await uploadImage(imageFile, 'products') : imageUrl;
+      const payload = {
       name,
       description: description || null,
       category_id: categoryId || null,
-      image_url: imageUrl || null,
+      image_url: uploadedImageUrl || null,
       video_url: videoUrl || null,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       price: price ? Number(price) : null,
       stock: stock ? Number(stock) : 0,
     };
-    let res;
-    if (initial) {
-      res = await supabase.from('products').update(payload).eq('id', initial.id);
-    } else {
-      res = await supabase.from('products').insert(payload);
+      let res;
+      if (initial) {
+        res = await supabase.from('products').update(payload).eq('id', initial.id);
+      } else {
+        res = await supabase.from('products').insert(payload);
+      }
+      if (res.error) { setError(res.error.message); return; }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    if (res.error) { setError(res.error.message); return; }
-    onSaved();
   }
 
   return (
@@ -143,7 +165,7 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
 
         <div className="space-y-4">
           <div>
-            <label className="label">Nombre</label>
+            <label className="label">Nombre comercial / real</label>
             <input value={name} onChange={(e) => setName(e.target.value)} className="input" required placeholder="Martillo de uña" />
           </div>
           <div>
@@ -156,7 +178,6 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
               <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input">
                 <option value="">Sin categoría</option>
                 {categories.map((c) => {
-                  const Icon = iconFor(c.icon);
                   return <option key={c.id} value={c.id}>{c.name}</option>;
                 })}
               </select>
@@ -171,8 +192,11 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Produ
             <input type="number" min="0" value={stock} onChange={(e) => setStock(e.target.value)} className="input" placeholder="0" />
           </div>
           <div>
-            <label className="label">URL de la foto</label>
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="input" placeholder="https://..." />
+            <label className="label">Imagen del producto</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink">
+              <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Subir imagen'}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+            </label>
             {imageUrl && <img src={imageUrl} alt="preview" className="mt-2 h-24 w-24 rounded-xl object-cover" />}
           </div>
           <div>

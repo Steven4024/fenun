@@ -10,6 +10,7 @@ import { VideoReels } from '@/components/storefront/VideoReels';
 import { ProductGrid } from '@/components/storefront/ProductGrid';
 import { FloatingWhatsApp } from '@/components/storefront/FloatingWhatsApp';
 import { Footer } from '@/components/storefront/Footer';
+import { CartDrawer, type CartItem } from '@/components/storefront/CartDrawer';
 
 export function Storefront() {
   const settings = useSiteSettings();
@@ -22,6 +23,8 @@ export function Storefront() {
 
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -68,16 +71,44 @@ export function Storefront() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return withCategory.filter((product) => product.name.toLowerCase().includes(q) || (product.description?.toLowerCase().includes(q) ?? false) || product.tags.some((tag) => tag.toLowerCase().includes(q)));
+  }, [withCategory, query]);
+
+  const selectedCategory = categories.find((category) => category.slug === activeCategory) ?? null;
+  const recommendations = useMemo(() => activeCategory ? withCategory.filter((product) => product.category?.slug !== activeCategory && product.stock > 0).slice(0, 4) : [], [withCategory, activeCategory]);
+
+  const addToCart = (product: ProductWithCategory) => {
+    setCart((current) => {
+      const item = current.find((entry) => entry.product.id === product.id);
+      if (item) return current.map((entry) => entry.product.id === product.id ? { ...entry, quantity: Math.min(entry.quantity + 1, product.stock) } : entry);
+      return [...current, { product, quantity: 1 }];
+    });
+    setCartOpen(true);
+  };
+
+  const updateQuantity = (id: string, quantity: number) => setCart((current) => current.flatMap((item) => item.product.id === id ? (quantity > 0 ? [{ ...item, quantity: Math.min(quantity, item.product.stock) }] : []) : [item]));
+
+  const selectResult = (product: ProductWithCategory) => {
+    setQuery('');
+    setActiveCategory(product.category?.slug ?? null);
+    window.setTimeout(() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  };
+
   return (
     <div className="min-h-screen bg-canvas">
-      <Header query={query} onQuery={setQuery} onLogo={goHome} settings={settings} />
+      <Header query={query} onQuery={setQuery} onLogo={goHome} settings={settings} results={searchResults} onSelectResult={selectResult} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} onCart={() => setCartOpen(true)} />
       <Hero banners={banners} settings={settings} />
       <Brands brands={brands} />
       <CategoryCircles categories={categories} active={activeCategory} onSelect={setActiveCategory} />
-      <ProductGrid products={filtered} loading={loading} settings={settings} />
+      <ProductGrid products={filtered} loading={loading} settings={settings} title={selectedCategory ? `Categoría: ${selectedCategory.name}` : 'Catálogo'} onAdd={addToCart} />
+      {selectedCategory && recommendations.length > 0 && <ProductGrid products={recommendations} loading={false} settings={settings} title="También te puede interesar" onAdd={addToCart} />}
       <VideoReels videos={videos} />
       <Footer settings={settings} categories={categories} />
       <FloatingWhatsApp settings={settings} />
+      <CartDrawer items={cart} open={cartOpen} onClose={() => setCartOpen(false)} onQuantity={updateQuantity} settings={settings} />
     </div>
   );
 }

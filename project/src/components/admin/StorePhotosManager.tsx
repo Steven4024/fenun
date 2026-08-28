@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { StorePhoto } from '@/lib/types';
+import { uploadImage } from '@/lib/storage';
 
 export function StorePhotosManager() {
   const [items, setItems] = useState<StorePhoto[]>([]);
@@ -67,7 +68,8 @@ export function StorePhotosManager() {
 
 function PhotoForm({ initial, onClose, onSaved }: { initial: StorePhoto | null; onClose: () => void; onSaved: () => void }) {
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '');
+  const [imageUrl] = useState(initial?.image_url ?? '');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,13 +78,16 @@ function PhotoForm({ initial, onClose, onSaved }: { initial: StorePhoto | null; 
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const payload = { title: title || null, image_url: imageUrl, sort_order: sortOrder };
-    let res;
-    if (initial) res = await supabase.from('store_photos').update(payload).eq('id', initial.id);
-    else res = await supabase.from('store_photos').insert(payload);
-    setSaving(false);
-    if (res.error) { setError(res.error.message); return; }
-    onSaved();
+    try {
+      const uploadedImageUrl = imageFile ? await uploadImage(imageFile, 'store-photos') : imageUrl;
+      if (!uploadedImageUrl) { setError('Selecciona una imagen del local.'); return; }
+      const payload = { title: title || null, image_url: uploadedImageUrl, sort_order: sortOrder };
+      const res = initial ? await supabase.from('store_photos').update(payload).eq('id', initial.id) : await supabase.from('store_photos').insert(payload);
+      if (res.error) { setError(res.error.message); return; }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo subir la imagen.');
+    } finally { setSaving(false); }
   }
 
   return (
@@ -98,8 +103,11 @@ function PhotoForm({ initial, onClose, onSaved }: { initial: StorePhoto | null; 
             <input value={title} onChange={(e) => setTitle(e.target.value)} className="input" placeholder="Local Central" />
           </div>
           <div>
-            <label className="label">URL de la foto</label>
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="input" required placeholder="https://..." />
+            <label className="label">Imagen del local</label>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-slate-600 hover:border-ink hover:text-ink">
+              <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Subir imagen'}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+            </label>
             {imageUrl && <img src={imageUrl} alt="preview" className="mt-2 h-24 w-full rounded-xl object-cover" />}
           </div>
           <div>
