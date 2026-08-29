@@ -11,9 +11,10 @@ interface Props {
   onSelectResult: (product: ProductWithCategory) => void;
   cartCount: number;
   onCart: () => void;
+  onQuickFilter: (filter: 'offers' | 'new') => void;
 }
 
-export function Header({ query, onQuery, onLogo, settings, results, onSelectResult, cartCount, onCart }: Props) {
+export function Header({ query, onQuery, onLogo, settings, results, onSelectResult, cartCount, onCart, onQuickFilter }: Props) {
   const wa = waLink(generalContactMessage(), settings.whatsapp_number);
   return (
     <header className="sticky top-0 z-40">
@@ -74,6 +75,7 @@ export function Header({ query, onQuery, onLogo, settings, results, onSelectResu
             {query.trim() && <SearchResults results={results} onSelectResult={onSelectResult} />}
           </div>
         </div>
+        <div className="container-app flex gap-2 pb-3 text-xs font-bold"><button onClick={() => onQuickFilter('offers')} className="rounded-full bg-amber-100 px-3 py-1.5 text-amber-900">Ofertas del mes</button><button onClick={() => onQuickFilter('new')} className="rounded-full bg-slate-100 px-3 py-1.5 text-ink">Novedades</button></div>
       </div>
     </header >
   );

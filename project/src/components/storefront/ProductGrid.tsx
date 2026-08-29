@@ -7,11 +7,12 @@ interface Props {
   settings: SiteSettings;
   title?: string;
   onAdd: (product: ProductWithCategory) => void;
+  onDetails: (product: ProductWithCategory) => void;
   view?: 'grid' | 'list';
   onView?: (view: 'grid' | 'list') => void;
 }
 
-export function ProductGrid({ products, loading, title = 'Catálogo', onAdd, view = 'grid', onView }: Props) {
+export function ProductGrid({ products, loading, title = 'Catálogo', onAdd, onDetails, view = 'grid', onView }: Props) {
   if (loading) {
     return (
       <section className="container-app py-12">
@@ -82,7 +83,7 @@ export function ProductGrid({ products, loading, title = 'Catálogo', onAdd, vie
               </div>
 
               <div className={`flex flex-1 flex-col ${view === 'grid' ? 'p-4' : 'min-w-0 py-1 pr-2'}`}>
-                <h3 className="line-clamp-2 text-sm font-semibold text-ink">{p.name}</h3>
+                <button onClick={() => onDetails(p)} className="line-clamp-2 text-left text-sm font-semibold text-ink hover:underline">{p.name}</button>
                 {p.description && (
                   <p className="mt-1 line-clamp-2 text-xs text-slate-500">{p.description}</p>
                 )}
@@ -100,6 +101,8 @@ export function ProductGrid({ products, loading, title = 'Catálogo', onAdd, vie
                 {p.price != null && (
                   <p className="mt-3 text-lg font-bold text-ink">S/ {p.price.toFixed(2)}</p>
                 )}
+
+                <button onClick={() => onDetails(p)} className="mt-3 text-left text-xs font-bold text-slate-600 underline underline-offset-2 hover:text-ink">Ver detalles</button>
 
                 <button disabled={!inStock} onClick={() => onAdd(p)} className={`btn-ink mt-auto disabled:cursor-not-allowed disabled:opacity-40 ${view === 'grid' ? 'w-full' : 'mt-3 sm:absolute sm:right-5 sm:w-32'}`}>
                   <ShoppingCart className="h-4 w-4" /> {inStock ? 'Agregar' : 'Agotado'}
