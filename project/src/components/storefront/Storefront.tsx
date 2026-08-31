@@ -28,7 +28,7 @@ export function Storefront() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
-
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithCategory | null>(null);
   useEffect(() => {
     (async () => {
       const [cats, prods, bans, brs, vids] = await Promise.all([
@@ -59,15 +59,14 @@ export function Storefront() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return withCategory.filter((p) => {
-     const matchesQuery = q 
-  ? (
-      p.name?.toLowerCase().includes(q) || 
-      p.description?.toLowerCase().includes(q) || 
-      p.brand?.toLowerCase().includes(q) || 
-      p.category?.name?.toLowerCase().includes(q) || 
-      p.tags?.some((t: string) => t.toLowerCase().includes(q))
-    ) 
-  : true;
+      const matchesCat = !activeCategory || p.category?.slug === activeCategory;
+      const matchesBrand = !activeBrand || (p as any).brand === activeBrand || (p as any).brand_id === activeBrand;
+      const matchesQuery = !q || (
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        (p as any).brand?.toLowerCase().includes(q) || p.category?.name?.toLowerCase().includes(q) ||
+        p.tags?.some((t: string) => t.toLowerCase().includes(q))
+      );
       return matchesCat && matchesBrand && matchesQuery;
     });
   }, [withCategory, query, activeCategory, activeBrand]);
@@ -78,13 +77,15 @@ export function Storefront() {
   };
 
   const searchResults = useMemo(() => {
-  return withCategory.filter((product) => 
-  product.name?.toLowerCase().includes(q) || 
-  product.description?.toLowerCase().includes(q) || 
-  product.brand?.toLowerCase().includes(q) || 
-  product.category?.name?.toLowerCase().includes(q) || 
-  product.tags?.some((t: string) => t.toLowerCase().includes(q))
-);
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return withCategory.filter((product) =>
+      product.name?.toLowerCase().includes(q) ||
+      product.description?.toLowerCase().includes(q) ||
+      (product as any).brand?.toLowerCase().includes(q) || product.category?.name?.toLowerCase().includes(q) ||
+      product.tags?.some((t: string) => t.toLowerCase().includes(q))
+    );
+  }, [withCategory, query]);
 
   const selectedCategory = categories.find((category) => category.slug === activeCategory) ?? null;
   const offers = useMemo(() => withCategory.filter((product) => product.tags.includes('featured') && product.stock > 0).slice(0, 4), [withCategory]);
@@ -110,15 +111,14 @@ export function Storefront() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <Header query={query} onQuery={setQuery} onLogo={goHome} settings={settings} results={searchResults} onSelectResult={selectResult} cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} onCart={() => setCartOpen(true)} />
+      <Header query={query} onQuery={setQuery} onLogo={goHome} settings={settings} results={searchResults} onSelectResult={selectResult} cartCount={cart.length} onCart={() => setCartOpen(true)} onQuickFilter={(catId) => setActiveCategory(catId)} />
       <Hero banners={banners} settings={settings} />
-      <Brands brands={brands} activeBrand={activeBrand} onSelect={(brand) => { setActiveBrand(brand?.id ?? null); setActiveCategory(null); window.setTimeout(() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); }} />
-      <CategoryCircles categories={categories} active={activeCategory} onSelect={(slug) => { setActiveBrand(null); setActiveCategory(slug); }} />
-      {selectedCategory && <CategoryHero category={selectedCategory} onBack={() => { setActiveCategory(null); window.setTimeout(() => document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); }} />}
-      {!activeCategory && !activeBrand && offers.length > 0 && <ProductGrid products={offers} loading={false} settings={settings} title="Ofertas del Mes" onAdd={addToCart} view={view} onView={setView} />}
-      <ProductGrid products={filtered} loading={loading} settings={settings} title={activeBrand ? `Marca: ${brands.find((brand) => brand.id === activeBrand)?.name ?? ''}` : selectedCategory ? `Categoría: ${selectedCategory.name}` : 'Catálogo'} onAdd={addToCart} view={view} onView={setView} />
-      {selectedCategory && recommendations.length > 0 && <ProductGrid products={recommendations} loading={false} settings={settings} title="También te puede interesar" onAdd={addToCart} view={view} onView={setView} />}
-      <VideoReels videos={videos} />
+      <Brands brands={brands} activeBrand={activeBrand} onSelect={(brand) => { setActiveBrand(brand?.id ?? null); setActiveCategory(null); }} />
+      <CategoryCircles categories={categories} active={activeCategory} onSelect={(slug) => { setActiveBrand(null); setActiveCategory(slug); window.setTimeout(() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' }), 100); }} />
+      {selectedCategory && <CategoryHero category={selectedCategory} onBack={() => { setActiveCategory(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />}
+      {!activeCategory && !activeBrand && offers.length > 0 && <ProductGrid products={offers} loading={false} settings={settings} title="Ofertas del mes" onAdd={(p) => addToCart(p)} onDetails={(p) => setSelectedProduct(p)} />}      <div id="catalogo">
+        <ProductGrid products={filtered} loading={loading} settings={settings} title={activeBrand ? `Marca: ${brands.find((b) => b.id === activeBrand)?.name ?? ''}` : selectedCategory ? `Categoría: ${selectedCategory.name}` : 'Catálogo de Productos'} onAdd={(p) => addToCart(p)} onDetails={(p) => setSelectedProduct(p)} />      </div>
+      {selectedCategory && recommendations.length > 0 && <ProductGrid products={recommendations} loading={loading} settings={settings} title="También te podría interesar" onAdd={(p) => addToCart(p)} onDetails={(p) => setSelectedProduct(p)} />}      <VideoReels videos={videos} />
       <Footer settings={settings} categories={categories} />
       <FloatingWhatsApp settings={settings} />
       <CartDrawer items={cart} open={cartOpen} onClose={() => setCartOpen(false)} onQuantity={updateQuantity} settings={settings} />
