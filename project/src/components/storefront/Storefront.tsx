@@ -61,11 +61,9 @@ export function Storefront() {
     return withCategory.filter((p) => {
       const matchesCat = activeCategory ? p.category?.slug === activeCategory : true;
       const matchesBrand = activeBrand ? p.tags.includes(`brand:${activeBrand}`) : true;
-      const matchesQuery = q
-        ? p.name.toLowerCase().includes(q) ||
-          (p.description?.toLowerCase().includes(q) ?? false) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
-        : true;
+      const matchesQuery = q 
+      ? (p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.tags?.some((t: string) => t.toLowerCase().includes(q))) 
+      : true;
       return matchesCat && matchesBrand && matchesQuery;
     });
   }, [withCategory, query, activeCategory, activeBrand]);
