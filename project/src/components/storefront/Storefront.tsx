@@ -59,11 +59,15 @@ export function Storefront() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return withCategory.filter((p) => {
-      const matchesCat = activeCategory ? p.category?.slug === activeCategory : true;
-      const matchesBrand = activeBrand ? p.tags.includes(`brand:${activeBrand}`) : true;
-      const matchesQuery = q 
-      ? (p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.tags?.some((t: string) => t.toLowerCase().includes(q))) 
-      : true;
+     const matchesQuery = q 
+  ? (
+      p.name?.toLowerCase().includes(q) || 
+      p.description?.toLowerCase().includes(q) || 
+      p.brand?.toLowerCase().includes(q) || 
+      p.category?.name?.toLowerCase().includes(q) || 
+      p.tags?.some((t: string) => t.toLowerCase().includes(q))
+    ) 
+  : true;
       return matchesCat && matchesBrand && matchesQuery;
     });
   }, [withCategory, query, activeCategory, activeBrand]);
@@ -74,10 +78,13 @@ export function Storefront() {
   };
 
   const searchResults = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return withCategory.filter((product) => product.name.toLowerCase().includes(q) || (product.description?.toLowerCase().includes(q) ?? false) || product.tags.some((tag) => tag.toLowerCase().includes(q)));
-  }, [withCategory, query]);
+  return withCategory.filter((product) => 
+  product.name?.toLowerCase().includes(q) || 
+  product.description?.toLowerCase().includes(q) || 
+  product.brand?.toLowerCase().includes(q) || 
+  product.category?.name?.toLowerCase().includes(q) || 
+  product.tags?.some((t: string) => t.toLowerCase().includes(q))
+);
 
   const selectedCategory = categories.find((category) => category.slug === activeCategory) ?? null;
   const offers = useMemo(() => withCategory.filter((product) => product.tags.includes('featured') && product.stock > 0).slice(0, 4), [withCategory]);
