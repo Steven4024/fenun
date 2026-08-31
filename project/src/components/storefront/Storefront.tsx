@@ -79,13 +79,26 @@ export function Storefront() {
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return withCategory.filter((product) =>
-      product.name?.toLowerCase().includes(q) ||
-      product.description?.toLowerCase().includes(q) ||
-      (product as any).brand?.toLowerCase().includes(q) || product.category?.name?.toLowerCase().includes(q) ||
-      product.tags?.some((t: string) => t.toLowerCase().includes(q))
-    );
-  }, [withCategory, query]);
+    
+    // Buscar productos que coincidan por nombre, descripción, marca o categoría
+    const matchedProducts = withCategory.filter((product) => {
+      const brandVal = (product as any).brand || (product as any).brand_id || '';
+      return (
+        product.name?.toLowerCase().includes(q) ||
+        product.description?.toLowerCase().includes(q) ||
+        brandVal.toLowerCase().includes(q) ||
+        product.category?.name?.toLowerCase().includes(q) ||
+        product.tags?.some((t: string) => t.toLowerCase().includes(q))
+      );
+    });
+
+    // Buscar también categorías que coincidan para mostrarlas en el buscador
+    const matchedCategories = categories.filter((cat) => 
+      cat.name?.toLowerCase().includes(q)
+    ).map(cat => ({ ...cat, isCategoryCard: true }));
+
+    return [...matchedCategories, ...matchedProducts].slice(0, 6);
+  }, [withCategory, categories, query]);
 
   const selectedCategory = categories.find((category) => category.slug === activeCategory) ?? null;
   const offers = useMemo(() => withCategory.filter((product) => product.tags.includes('featured') && product.stock > 0).slice(0, 4), [withCategory]);
@@ -111,8 +124,7 @@ export function Storefront() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <Header query={query} onQuery={setQuery} onLogo={goHome} settings={settings} results={searchResults} onSelectResult={selectResult} cartCount={cart.length} onCart={() => setCartOpen(true)} onQuickFilter={(catId) => setActiveCategory(catId)} />
-      <Hero banners={banners} settings={settings} />
+results={searchResults as any}      <Hero banners={banners} settings={settings} />
       <Brands brands={brands} activeBrand={activeBrand} onSelect={(brand) => { setActiveBrand(brand?.id ?? null); setActiveCategory(null); }} />
       <CategoryCircles categories={categories} active={activeCategory} onSelect={(slug) => { setActiveBrand(null); setActiveCategory(slug); window.setTimeout(() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' }), 100); }} />
       {selectedCategory && <CategoryHero category={selectedCategory} onBack={() => { setActiveCategory(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />}
