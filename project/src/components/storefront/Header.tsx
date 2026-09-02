@@ -80,9 +80,45 @@ export function Header({ query, onQuery, onLogo, settings, results, onSelectResu
     </header >
   );
 }
-
-function SearchResults({ results, onSelectResult }: { results: ProductWithCategory[]; onSelectResult: (product: ProductWithCategory) => void }) {
-  return <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-    {results.length === 0 ? <p className="px-4 py-3 text-sm font-medium text-slate-600">Producto no encontrado</p> : results.slice(0, 6).map((product) => <button key={product.id} onClick={() => onSelectResult(product)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50"><span className="h-9 w-9 overflow-hidden rounded bg-slate-100">{product.image_url && <img src={product.image_url} alt="" className="h-full w-full object-cover" />}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold text-ink">{product.name}</span><span className="block text-xs text-slate-500">{product.category?.name ?? 'Sin categoría'}</span></span></button>)}
-  </div>;
+function SearchResults({ 
+  results, 
+  onSelectResult 
+}: { 
+  results: ProductWithCategory[]; 
+  onSelectResult: (product: ProductWithCategory) => void 
+}) {
+  return (
+    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-96 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
+      {results.length === 0 ? (
+        <p className="px-4 py-3 text-sm font-medium text-slate-600">Producto no encontrado</p>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {results.map((product: any) => (
+            <button
+              key={product.id}
+              onClick={() => onSelectResult(product)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+            >
+              {product.image_url && (
+                <img 
+                  src={product.image_url} 
+                  alt={product.name} 
+                  className="h-10 w-10 rounded-lg object-cover border border-slate-100" 
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{product.name}</p>
+                <p className="text-xs text-slate-500 truncate">
+                  {product.category?.name || product.categories?.name || 'General'} {product.brand?.name || product.brands?.name ? `• ${product.brand?.name || product.brands?.name}` : ''}
+                </p>
+              </div>
+              <span className="text-sm font-bold text-ink">
+                S/ {Number(product.price).toFixed(2)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
